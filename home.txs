@@ -15,6 +15,7 @@ interface Category {
   id_category: number
   category_name: string
   description: string
+  section?: string // Solo agregar este campo opcional
 }
 
 export default function HomePage() {
@@ -42,6 +43,12 @@ export default function HomePage() {
 
   // Función para determinar qué categorías mostrar según el tab activo
   const getCategoriesForTab = (tab: string) => {
+    // Si las categorías tienen campo section, usarlo; si no, usar lógica anterior
+    if (categories.length > 0 && categories[0].section) {
+      return categories.filter(cat => cat.section === tab)
+    }
+    
+    // Lógica original como fallback
     switch (tab) {
       case 'sneakers':
         return categories.filter(cat => 
@@ -65,6 +72,16 @@ export default function HomePage() {
 
   // Función para obtener productos según el tab activo
   const getProductsForTab = (tab: string) => {
+    // Si las categorías tienen campo section, usar esa lógica
+    if (categories.length > 0 && categories[0].section) {
+      const sectionCategories = categories.filter(cat => cat.section === tab)
+      const categoryNames = sectionCategories.map(cat => cat.category_name.toLowerCase())
+      return products.filter(product => 
+        categoryNames.includes(product.category_name.toLowerCase())
+      )
+    }
+
+    // Lógica original como fallback
     switch (tab) {
       case 'sneakers':
         return products.filter(product => 
@@ -124,7 +141,7 @@ export default function HomePage() {
       )
       setFilteredProducts(filtered)
     }
-  }, [selectedCategory, products, activeTab])
+  }, [selectedCategory, products, activeTab, categories]) // Agregar categories a las dependencias
 
   // Función para manejar cambio de tab
   const handleTabChange = (tab: string) => {
