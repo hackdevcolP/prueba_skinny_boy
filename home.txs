@@ -1,0 +1,345 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+
+interface Product {
+  id_product: number
+  product_name: string
+  description: string
+  price: number
+  category_name: string
+  images: string[]
+}
+
+interface Category {
+  id_category: number
+  category_name: string
+  description: string
+}
+
+export default function HomePage() {
+  const [products, setProducts] = useState<Product[]>([])
+  const [categories, setCategories] = useState<Category[]>([])
+  const [filteredProducts, setFilteredProducts] = useState<Product[]>([])
+  const [selectedCategory, setSelectedCategory] = useState<string>('all')
+  const [loading, setLoading] = useState(true)
+
+  // Configuración de marcas de agua
+  const watermarkConfig = {
+    showTextWatermark: false,
+    showImageWatermark: true,
+    showSecondaryCenter: true,
+    showCornerWatermark: true,
+    showMultipleImages: false,
+    textOpacity: 'opacity-5',
+    imageOpacity: 'opacity-10',
+    secondaryOpacity: 'opacity-8',
+    cornerOpacity: 'opacity-15',
+    textRotation: 'rotate-12',
+    imageRotation: 'rotate-12',
+  }
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [productsRes, categoriesRes] = await Promise.all([
+          fetch('/api/products'),
+          fetch('/api/categories')
+        ])
+        
+        if (productsRes.ok && categoriesRes.ok) {
+          const productsData = await productsRes.json()
+          const categoriesData = await categoriesRes.json()
+          
+          setProducts(productsData.products || [])
+          setCategories(categoriesData || [])
+          setFilteredProducts(productsData.products || [])
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchData()
+  }, [])
+
+  // Filtrar productos por categoría
+  useEffect(() => {
+    if (selectedCategory === 'all') {
+      setFilteredProducts(products)
+    } else {
+      const filtered = products.filter(product => 
+        product.category_name.toLowerCase() === selectedCategory.toLowerCase()
+      )
+      setFilteredProducts(filtered)
+    }
+  }, [selectedCategory, products])
+
+  const handleCategoryClick = (categoryName: string) => {
+    setSelectedCategory(categoryName)
+  }
+
+  const handleProductClick = (productId: number) => {
+    window.location.href = `/producto/${productId}`
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-black mx-auto"></div>
+          <p className="mt-4 text-gray-600">Cargando productos...</p>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen bg-white relative overflow-hidden">
+      {/* Background Watermarks */}
+      <div className="fixed inset-0 pointer-events-none z-0">
+        {/* Texto central */}
+        {watermarkConfig.showTextWatermark && (
+          <div className={`absolute inset-0 flex items-center justify-center ${watermarkConfig.textOpacity}`}>
+            <div className={`text-black text-[8rem] sm:text-[12rem] md:text-[16rem] lg:text-[20rem] font-bold ${watermarkConfig.textRotation} select-none`}>
+              SKINNY
+            </div>
+          </div>
+        )}
+
+{/* Marca central principal */}
+<div className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-[60%] ${watermarkConfig.imageOpacity}`}>
+  <img 
+    src="/images/watermark-central.png" 
+    alt="Central Watermark" 
+    className="w-[20rem] h-[20rem] object-contain select-none"
+  />
+</div>
+
+        {/* Marca central secundaria */}
+        {watermarkConfig.showSecondaryCenter && (
+          <div className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 translate-y-1/2 ${watermarkConfig.secondaryOpacity}`}>
+            <img 
+              src="/images/watermark-central-2.png" 
+              alt="Secondary Central Watermark" 
+              className="w-[10rem] h-[10rem] sm:w-[12rem] sm:h-[12rem] md:w-[14rem] md:h-[14rem] lg:w-[16rem] lg:h-[16rem] object-contain rotate-6 select-none blur-[1px]"
+              onError={(e) => { e.currentTarget.style.display = 'none' }}
+            />
+          </div>
+        )}
+
+        {/* Marca en esquina */}
+        {watermarkConfig.showCornerWatermark && (
+          <div className={`absolute bottom-20 left-10 ${watermarkConfig.cornerOpacity}`}>
+            <img 
+              src="/images/watermark-corner.png" 
+              alt="Corner Watermark" 
+              className="w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 object-contain -rotate-12 select-none"
+              onError={(e) => { e.currentTarget.style.display = 'none' }}
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Header */}
+      <header className="relative z-10 bg-white shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 py-6 sm:py-8">
+          <div className="flex items-center justify-center">
+            <div className="text-center">
+              <div className="relative">
+                <div className="w-24 h-24 sm:w-32 sm:h-32 mx-auto mb-4 flex items-center justify-center">
+                  <img src="/images/logo.png" alt="Skinny Boy Logo" className="w-full h-full object-contain" />
+                </div>
+                <h1 className="text-2xl sm:text-3xl font-bold text-black tracking-wider">SKINNY BOY</h1>
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Tabs */}
+      <nav className="relative z-10 bg-white border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="flex justify-center space-x-4 sm:space-x-8 lg:space-x-12 overflow-x-auto">
+            <button className="py-4 px-3 sm:px-6 border-b-2 border-black font-bold text-black whitespace-nowrap">Sneakers</button>
+            <button className="py-4 px-3 sm:px-6 text-gray-600 hover:text-black font-medium transition-colors whitespace-nowrap">MEDIAS SKINNYBOY</button>
+            <button className="py-4 px-3 sm:px-6 text-gray-600 hover:text-black font-medium transition-colors whitespace-nowrap">CHOMPOS, BUZOS, GORROS, GORRAS, PESQUEROS</button>
+          </div>
+        </div>
+      </nav>
+
+      {/* Main */}
+      <main className="relative z-10 max-w-7xl mx-auto px-4 py-8 sm:py-12">
+        {/* Categories Filter */}
+        <div className="flex flex-wrap justify-center gap-8 sm:gap-12 lg:gap-16 mb-12 sm:mb-16">
+          {/* Botón para mostrar todos */}
+          <div className="text-center cursor-pointer" onClick={() => handleCategoryClick('all')}>
+            <div className={`w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-3 sm:mb-4 rounded-full flex items-center justify-center transition-all duration-300 ${
+              selectedCategory === 'all' 
+                ? 'bg-black text-white shadow-lg scale-110' 
+                : 'bg-gray-100 border-2 border-gray-300 hover:bg-gray-200'
+            }`}>
+              <span className="font-bold text-xs sm:text-sm">TODOS</span>
+            </div>
+            <h3 className={`font-bold text-sm sm:text-base transition-colors ${
+              selectedCategory === 'all' ? 'text-black' : 'text-gray-600'
+            }`}>Todos los productos</h3>
+            <p className="text-xs sm:text-sm text-gray-500 mt-1">
+              {products.length} productos
+            </p>
+          </div>
+
+          {/* Categorías dinámicas */}
+          {categories.length > 0 ? (
+            categories.map((category) => (
+              <div 
+                key={category.id_category} 
+                className="text-center cursor-pointer" 
+                onClick={() => handleCategoryClick(category.category_name)}
+              >
+                <div className={`w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-3 sm:mb-4 rounded-full flex items-center justify-center transition-all duration-300 ${
+                  selectedCategory.toLowerCase() === category.category_name.toLowerCase()
+                    ? 'bg-black text-white shadow-lg scale-110'
+                    : 'bg-gradient-to-br from-blue-400 to-purple-500 hover:from-blue-500 hover:to-purple-600'
+                }`}>
+                  <span className="text-white font-bold text-xs sm:text-sm">
+                    {category.category_name.slice(0, 8)}
+                  </span>
+                </div>
+                <h3 className={`font-bold text-sm sm:text-base transition-colors ${
+                  selectedCategory.toLowerCase() === category.category_name.toLowerCase() 
+                    ? 'text-black' 
+                    : 'text-gray-600'
+                }`}>
+                  {category.category_name}
+                </h3>
+                <p className="text-xs sm:text-sm text-gray-500 mt-1">
+                  {products.filter(p => p.category_name.toLowerCase() === category.category_name.toLowerCase()).length} productos
+                </p>
+              </div>
+            ))
+          ) : (
+            // Categorías de fallback si no hay en BD
+            <>
+              <div className="text-center cursor-pointer" onClick={() => handleCategoryClick('hombre')}>
+                <div className={`w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-3 sm:mb-4 rounded-full flex items-center justify-center transition-all ${
+                  selectedCategory === 'hombre' ? 'bg-black text-white' : 'bg-gradient-to-br from-blue-400 to-purple-500'
+                }`}>
+                  <span className="text-white font-bold text-xs sm:text-sm">HOMBRE</span>
+                </div>
+                <h3 className="font-bold text-black text-sm sm:text-base">Hombre</h3>
+                <p className="text-xs sm:text-sm text-gray-500 mt-1">Sneakers para hombre</p>
+              </div>
+
+              <div className="text-center cursor-pointer" onClick={() => handleCategoryClick('mujer')}>
+                <div className={`w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-3 sm:mb-4 rounded-full flex items-center justify-center transition-all ${
+                  selectedCategory === 'mujer' ? 'bg-black text-white' : 'bg-gradient-to-br from-purple-500 to-pink-500'
+                }`}>
+                  <span className="text-white font-bold text-xs">MUJER</span>
+                </div>
+                <h3 className="font-bold text-black text-sm sm:text-base">Mujer</h3>
+                <p className="text-xs sm:text-sm text-gray-500 mt-1">Sneakers para mujer</p>
+              </div>
+
+              <div className="text-center cursor-pointer" onClick={() => handleCategoryClick('niños')}>
+                <div className={`w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-3 sm:mb-4 rounded-full flex items-center justify-center transition-all ${
+                  selectedCategory === 'niños' ? 'bg-black text-white' : 'bg-gradient-to-br from-green-400 to-blue-500'
+                }`}>
+                  <span className="text-white font-bold text-xs">NIÑOS</span>
+                </div>
+                <h3 className="font-bold text-black text-sm sm:text-base">Niños</h3>
+                <p className="text-xs sm:text-sm text-gray-500 mt-1">Sneakers para niños</p>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Indicador de categoría actual */}
+        <div className="text-center mb-8">
+          <h2 className="text-xl sm:text-2xl font-bold text-black mb-2">
+            {selectedCategory === 'all' ? 'Todos los productos' : `${selectedCategory.charAt(0).toUpperCase() + selectedCategory.slice(1)}`}
+          </h2>
+          <p className="text-gray-600">
+            {filteredProducts.length} {filteredProducts.length === 1 ? 'producto encontrado' : 'productos encontrados'}
+          </p>
+        </div>
+
+        {/* Products Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+          {filteredProducts.length > 0 ? (
+            filteredProducts.map((product) => (
+              <div 
+                key={product.id_product} 
+                className="group cursor-pointer" 
+                onClick={() => handleProductClick(product.id_product)}
+              >
+                <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100">
+                  <div className="aspect-square bg-gray-50 rounded-xl sm:rounded-2xl mb-4 sm:mb-6 flex items-center justify-center overflow-hidden relative">
+                    {product.images && product.images.length > 0 ? (
+                      <img 
+                        src={product.images[0]} 
+                        alt={product.product_name} 
+                        className="w-full h-full object-cover rounded-xl sm:rounded-2xl group-hover:scale-105 transition-transform duration-300" 
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl sm:rounded-2xl flex items-center justify-center">
+                        <span className="text-gray-400 text-xs sm:text-sm">Imagen próximamente</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="text-center">
+                    <h3 className="font-bold text-black text-base sm:text-lg mb-2">{product.product_name}</h3>
+                    <p className="text-gray-600 text-sm mb-2 font-medium">{product.category_name}</p>
+                    <p className="text-gray-500 text-xs sm:text-sm mb-4 sm:mb-6 line-clamp-2">{product.description}</p>
+                    <div className="text-lg sm:text-xl font-bold text-black mb-4 sm:mb-6">
+                      ${new Intl.NumberFormat('es-CO').format(product.price)}
+                    </div>
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleProductClick(product.id_product);
+                      }}
+                      className="w-full sm:w-auto inline-block bg-black text-white px-6 sm:px-8 py-2 sm:py-3 rounded-full text-sm font-bold hover:bg-gray-800 transition-colors shadow-lg hover:shadow-xl"
+                    >
+                      Ver Detalles
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="col-span-full text-center py-12">
+              <div className="text-gray-400 text-6xl mb-4">🔍</div>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">
+                No hay productos en esta categoría
+              </h3>
+              <p className="text-gray-600 mb-6">
+                Aún no hemos agregado productos para "{selectedCategory}". ¡Próximamente!
+              </p>
+              <button 
+                onClick={() => handleCategoryClick('all')}
+                className="bg-black text-white px-6 py-3 rounded-full font-medium hover:bg-gray-800 transition-colors"
+              >
+                Ver todos los productos
+              </button>
+            </div>
+          )}
+        </div>
+      </main>
+
+      {/* Footer */}
+      <footer className="relative z-10 bg-white border-t border-gray-200 mt-16 sm:mt-20">
+        <div className="max-w-7xl mx-auto px-4 py-6 sm:py-8 text-center">
+          <div className="text-gray-400 text-sm">© "pensar es gratis"  EXCLUSIVIDAD Y CALIDAD. 
+
+Made in COLOMBIA 🇨🇴</div>
+          <div className="mt-2">
+            <a href="/admin" className="text-gray-400 text-xs hover:text-gray-600 transition-colors">Panel de Administración</a>
+          </div>
+        </div>
+      </footer>
+    </div>
+  )
+}
