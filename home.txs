@@ -22,6 +22,7 @@ export default function HomePage() {
   const [categories, setCategories] = useState<Category[]>([])
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([])
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
+  const [activeTab, setActiveTab] = useState<string>('sneakers') // Nuevo estado para tabs
   const [loading, setLoading] = useState(true)
 
   // Configuración de marcas de agua
@@ -37,6 +38,52 @@ export default function HomePage() {
     cornerOpacity: 'opacity-15',
     textRotation: 'rotate-12',
     imageRotation: 'rotate-12',
+  }
+
+  // Función para determinar qué categorías mostrar según el tab activo
+  const getCategoriesForTab = (tab: string) => {
+    switch (tab) {
+      case 'sneakers':
+        return categories.filter(cat => 
+          ['sneakers', 'deportivos', 'casuales', 'hombre', 'mujer', 'niños'].includes(cat.category_name.toLowerCase())
+        )
+      case 'medias':
+        return categories.filter(cat => 
+          cat.category_name.toLowerCase().includes('medias') || 
+          cat.category_name.toLowerCase().includes('calcetines')
+        )
+      case 'ropa':
+        return categories.filter(cat => 
+          ['chompos', 'buzos', 'gorros', 'gorras', 'pesqueros'].some(item => 
+            cat.category_name.toLowerCase().includes(item)
+          )
+        )
+      default:
+        return categories
+    }
+  }
+
+  // Función para obtener productos según el tab activo
+  const getProductsForTab = (tab: string) => {
+    switch (tab) {
+      case 'sneakers':
+        return products.filter(product => 
+          ['sneakers', 'deportivos', 'casuales', 'hombre', 'mujer', 'niños'].includes(product.category_name.toLowerCase())
+        )
+      case 'medias':
+        return products.filter(product => 
+          product.category_name.toLowerCase().includes('medias') || 
+          product.category_name.toLowerCase().includes('calcetines')
+        )
+      case 'ropa':
+        return products.filter(product => 
+          ['chompos', 'buzos', 'gorros', 'gorras', 'pesqueros'].some(item => 
+            product.category_name.toLowerCase().includes(item)
+          )
+        )
+      default:
+        return products
+    }
   }
 
   useEffect(() => {
@@ -65,17 +112,25 @@ export default function HomePage() {
     fetchData()
   }, [])
 
-  // Filtrar productos por categoría
+  // Filtrar productos por categoría y tab activo
   useEffect(() => {
+    const tabProducts = getProductsForTab(activeTab)
+    
     if (selectedCategory === 'all') {
-      setFilteredProducts(products)
+      setFilteredProducts(tabProducts)
     } else {
-      const filtered = products.filter(product => 
+      const filtered = tabProducts.filter(product => 
         product.category_name.toLowerCase() === selectedCategory.toLowerCase()
       )
       setFilteredProducts(filtered)
     }
-  }, [selectedCategory, products])
+  }, [selectedCategory, products, activeTab])
+
+  // Función para manejar cambio de tab
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab)
+    setSelectedCategory('all') // Resetear filtro de categoría al cambiar tab
+  }
 
   const handleCategoryClick = (categoryName: string) => {
     setSelectedCategory(categoryName)
@@ -95,6 +150,10 @@ export default function HomePage() {
       </div>
     )
   }
+
+  // Obtener categorías y productos para el tab actual
+  const currentTabCategories = getCategoriesForTab(activeTab)
+  const currentTabProducts = getProductsForTab(activeTab)
 
   return (
     <div className="min-h-screen bg-white relative overflow-hidden">
@@ -163,9 +222,36 @@ export default function HomePage() {
       <nav className="relative z-10 bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex justify-center space-x-4 sm:space-x-8 lg:space-x-12 overflow-x-auto">
-            <button className="py-4 px-3 sm:px-6 border-b-2 border-black font-bold text-black whitespace-nowrap">Sneakers</button>
-            <button className="py-4 px-3 sm:px-6 text-gray-600 hover:text-black font-medium transition-colors whitespace-nowrap">MEDIAS SKINNYBOY</button>
-            <button className="py-4 px-3 sm:px-6 text-gray-600 hover:text-black font-medium transition-colors whitespace-nowrap">CHOMPOS, BUZOS, GORROS, GORRAS, PESQUEROS</button>
+            <button 
+              onClick={() => handleTabChange('sneakers')}
+              className={`py-4 px-3 sm:px-6 border-b-2 font-bold whitespace-nowrap transition-colors ${
+                activeTab === 'sneakers' 
+                  ? 'border-black text-black' 
+                  : 'border-transparent text-gray-600 hover:text-black'
+              }`}
+            >
+              Sneakers
+            </button>
+            <button 
+              onClick={() => handleTabChange('medias')}
+              className={`py-4 px-3 sm:px-6 border-b-2 font-medium whitespace-nowrap transition-colors ${
+                activeTab === 'medias' 
+                  ? 'border-black text-black font-bold' 
+                  : 'border-transparent text-gray-600 hover:text-black'
+              }`}
+            >
+              MEDIAS SKINNYBOY
+            </button>
+            <button 
+              onClick={() => handleTabChange('ropa')}
+              className={`py-4 px-3 sm:px-6 border-b-2 font-medium whitespace-nowrap transition-colors ${
+                activeTab === 'ropa' 
+                  ? 'border-black text-black font-bold' 
+                  : 'border-transparent text-gray-600 hover:text-black'
+              }`}
+            >
+              CHOMPOS, BUZOS, GORROS, GORRAS, PESQUEROS
+            </button>
           </div>
         </div>
       </nav>
@@ -187,13 +273,13 @@ export default function HomePage() {
               selectedCategory === 'all' ? 'text-black' : 'text-gray-600'
             }`}>Todos los productos</h3>
             <p className="text-xs sm:text-sm text-gray-500 mt-1">
-              {products.length} productos
+              {currentTabProducts.length} productos
             </p>
           </div>
 
-          {/* Categorías dinámicas */}
-          {categories.length > 0 ? (
-            categories.map((category) => (
+          {/* Categorías dinámicas según el tab activo */}
+          {currentTabCategories.length > 0 ? (
+            currentTabCategories.map((category) => (
               <div 
                 key={category.id_category} 
                 className="text-center cursor-pointer" 
@@ -216,42 +302,62 @@ export default function HomePage() {
                   {category.category_name}
                 </h3>
                 <p className="text-xs sm:text-sm text-gray-500 mt-1">
-                  {products.filter(p => p.category_name.toLowerCase() === category.category_name.toLowerCase()).length} productos
+                  {currentTabProducts.filter(p => p.category_name.toLowerCase() === category.category_name.toLowerCase()).length} productos
                 </p>
               </div>
             ))
           ) : (
-            // Categorías de fallback si no hay en BD
+            // Categorías de fallback específicas para cada tab
             <>
-              <div className="text-center cursor-pointer" onClick={() => handleCategoryClick('hombre')}>
-                <div className={`w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-3 sm:mb-4 rounded-full flex items-center justify-center transition-all ${
-                  selectedCategory === 'hombre' ? 'bg-black text-white' : 'bg-gradient-to-br from-blue-400 to-purple-500'
-                }`}>
-                  <span className="text-white font-bold text-xs sm:text-sm">HOMBRE</span>
-                </div>
-                <h3 className="font-bold text-black text-sm sm:text-base">Hombre</h3>
-                <p className="text-xs sm:text-sm text-gray-500 mt-1">Sneakers para hombre</p>
-              </div>
+              {activeTab === 'sneakers' && (
+                <>
+                  <div className="text-center cursor-pointer" onClick={() => handleCategoryClick('hombre')}>
+                    <div className={`w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-3 sm:mb-4 rounded-full flex items-center justify-center transition-all ${
+                      selectedCategory === 'hombre' ? 'bg-black text-white' : 'bg-gradient-to-br from-blue-400 to-purple-500'
+                    }`}>
+                      <span className="text-white font-bold text-xs sm:text-sm">HOMBRE</span>
+                    </div>
+                    <h3 className="font-bold text-black text-sm sm:text-base">Hombre</h3>
+                    <p className="text-xs sm:text-sm text-gray-500 mt-1">Sneakers para hombre</p>
+                  </div>
 
-              <div className="text-center cursor-pointer" onClick={() => handleCategoryClick('mujer')}>
-                <div className={`w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-3 sm:mb-4 rounded-full flex items-center justify-center transition-all ${
-                  selectedCategory === 'mujer' ? 'bg-black text-white' : 'bg-gradient-to-br from-purple-500 to-pink-500'
-                }`}>
-                  <span className="text-white font-bold text-xs">MUJER</span>
-                </div>
-                <h3 className="font-bold text-black text-sm sm:text-base">Mujer</h3>
-                <p className="text-xs sm:text-sm text-gray-500 mt-1">Sneakers para mujer</p>
-              </div>
+                  <div className="text-center cursor-pointer" onClick={() => handleCategoryClick('mujer')}>
+                    <div className={`w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-3 sm:mb-4 rounded-full flex items-center justify-center transition-all ${
+                      selectedCategory === 'mujer' ? 'bg-black text-white' : 'bg-gradient-to-br from-purple-500 to-pink-500'
+                    }`}>
+                      <span className="text-white font-bold text-xs">MUJER</span>
+                    </div>
+                    <h3 className="font-bold text-black text-sm sm:text-base">Mujer</h3>
+                    <p className="text-xs sm:text-sm text-gray-500 mt-1">Sneakers para mujer</p>
+                  </div>
 
-              <div className="text-center cursor-pointer" onClick={() => handleCategoryClick('niños')}>
-                <div className={`w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-3 sm:mb-4 rounded-full flex items-center justify-center transition-all ${
-                  selectedCategory === 'niños' ? 'bg-black text-white' : 'bg-gradient-to-br from-green-400 to-blue-500'
-                }`}>
-                  <span className="text-white font-bold text-xs">NIÑOS</span>
+                  <div className="text-center cursor-pointer" onClick={() => handleCategoryClick('niños')}>
+                    <div className={`w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-3 sm:mb-4 rounded-full flex items-center justify-center transition-all ${
+                      selectedCategory === 'niños' ? 'bg-black text-white' : 'bg-gradient-to-br from-green-400 to-blue-500'
+                    }`}>
+                      <span className="text-white font-bold text-xs">NIÑOS</span>
+                    </div>
+                    <h3 className="font-bold text-black text-sm sm:text-base">Niños</h3>
+                    <p className="text-xs sm:text-sm text-gray-500 mt-1">Sneakers para niños</p>
+                  </div>
+                </>
+              )}
+              
+              {activeTab === 'medias' && (
+                <div className="text-center">
+                  <div className="text-gray-400 text-4xl mb-4">🧦</div>
+                  <h3 className="text-lg font-bold text-gray-900 mb-2">Medias Skinny Boy</h3>
+                  <p className="text-gray-600">Próximamente disponibles</p>
                 </div>
-                <h3 className="font-bold text-black text-sm sm:text-base">Niños</h3>
-                <p className="text-xs sm:text-sm text-gray-500 mt-1">Sneakers para niños</p>
-              </div>
+              )}
+              
+              {activeTab === 'ropa' && (
+                <div className="text-center">
+                  <div className="text-gray-400 text-4xl mb-4">👕</div>
+                  <h3 className="text-lg font-bold text-gray-900 mb-2">Ropa y Accesorios</h3>
+                  <p className="text-gray-600">Chompos, buzos, gorros y más próximamente</p>
+                </div>
+              )}
             </>
           )}
         </div>
@@ -259,7 +365,11 @@ export default function HomePage() {
         {/* Indicador de categoría actual */}
         <div className="text-center mb-8">
           <h2 className="text-xl sm:text-2xl font-bold text-black mb-2">
-            {selectedCategory === 'all' ? 'Todos los productos' : `${selectedCategory.charAt(0).toUpperCase() + selectedCategory.slice(1)}`}
+            {selectedCategory === 'all' ? 
+              (activeTab === 'sneakers' ? 'Todos los Sneakers' : 
+               activeTab === 'medias' ? 'Todas las Medias' : 
+               'Toda la Ropa y Accesorios') : 
+              `${selectedCategory.charAt(0).toUpperCase() + selectedCategory.slice(1)}`}
           </h2>
           <p className="text-gray-600">
             {filteredProducts.length} {filteredProducts.length === 1 ? 'producto encontrado' : 'productos encontrados'}
@@ -311,18 +421,20 @@ export default function HomePage() {
             ))
           ) : (
             <div className="col-span-full text-center py-12">
-              <div className="text-gray-400 text-6xl mb-4">🔍</div>
+              <div className="text-gray-400 text-6xl mb-4">
+                {activeTab === 'sneakers' ? '👟' : activeTab === 'medias' ? '🧦' : '👕'}
+              </div>
               <h3 className="text-xl font-bold text-gray-900 mb-2">
-                No hay productos en esta categoría
+                No hay productos en esta sección
               </h3>
               <p className="text-gray-600 mb-6">
-                Aún no hemos agregado productos para "{selectedCategory}". ¡Próximamente!
+                Aún no hemos agregado productos para esta categoría. ¡Próximamente!
               </p>
               <button 
                 onClick={() => handleCategoryClick('all')}
                 className="bg-black text-white px-6 py-3 rounded-full font-medium hover:bg-gray-800 transition-colors"
               >
-                Ver todos los productos
+                Ver todos los productos de esta sección
               </button>
             </div>
           )}
