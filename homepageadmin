@@ -253,6 +253,8 @@ export default function ProductsManagement() {
       reference: product.reference
     })
     setShowEditForm(true)
+    // Cargar imágenes del producto al abrir el formulario de edición
+    fetchProductImages(product.id_product)
   }
 
   const viewProductImages = (product: Product) => {
@@ -499,73 +501,118 @@ export default function ProductsManagement() {
       )}
 
       {/* Edit Product Modal */}
-{showEditForm && selectedProduct && (
-  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-    <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-      <h3 className="text-lg font-semibold mb-4">Editar Producto</h3>
-      
-      {/* Formulario de edición */}
-      <div className="space-y-4 mb-6">
-        <input
-          type="text"
-          value={editProduct.product_name}
-          onChange={(e) => setEditProduct({...editProduct, product_name: e.target.value})}
-          className="w-full p-2 border rounded-lg"
-        />
-        {/* ... resto de campos ... */}
-      </div>
-
-      {/* Sección de imágenes */}
-      <div className="border-t pt-4">
-        <h4 className="font-medium mb-4">Gestión de Imágenes</h4>
-        
-        {/* Upload */}
-        <div className="mb-4">
-          <input
-            type="file"
-            multiple
-            accept="image/*"
-            onChange={(e) => setUploadFiles(e.target.files)}
-            className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700"
-          />
-          <button
-            onClick={handleUploadImages}
-            disabled={loading || !uploadFiles}
-            className="mt-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
-          >
-            Subir Imágenes
-          </button>
-        </div>
-
-        {/* Imágenes existentes */}
-        <div className="grid grid-cols-4 gap-2">
-          {productImages.map((image) => (
-            <div key={image.id_image} className="relative group">
-              <img
-                src={`http://localhost:4000${image.image_url}`}
-                className="w-full h-20 object-cover rounded"
+      {showEditForm && selectedProduct && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <h3 className="text-lg font-semibold mb-4">Editar Producto</h3>
+            
+            {/* Formulario de edición */}
+            <div className="space-y-4 mb-6">
+              <input
+                type="text"
+                placeholder="Nombre del producto"
+                value={editProduct.product_name}
+                onChange={(e) => setEditProduct({...editProduct, product_name: e.target.value})}
+                className="w-full p-2 border rounded-lg"
               />
-              <button
-                onClick={() => handleDeleteImage(image.id_image)}
-                className="absolute top-1 right-1 bg-red-600 text-white text-xs p-1 rounded opacity-0 group-hover:opacity-100"
+              <textarea
+                placeholder="Descripción"
+                value={editProduct.description}
+                onChange={(e) => setEditProduct({...editProduct, description: e.target.value})}
+                className="w-full p-2 border rounded-lg h-24"
+              />
+              <input
+                type="number"
+                placeholder="Precio"
+                value={editProduct.price}
+                onChange={(e) => setEditProduct({...editProduct, price: Number(e.target.value)})}
+                className="w-full p-2 border rounded-lg"
+              />
+              <input
+                type="text"
+                placeholder="Referencia"
+                value={editProduct.reference}
+                onChange={(e) => setEditProduct({...editProduct, reference: e.target.value})}
+                className="w-full p-2 border rounded-lg"
+              />
+              <select
+                value={editProduct.id_category}
+                onChange={(e) => setEditProduct({...editProduct, id_category: Number(e.target.value)})}
+                className="w-full p-2 border rounded-lg"
               >
-                ✕
+                <option value={0}>Seleccionar categoría</option>
+                {categories.map((category) => (
+                  <option key={category.id_category} value={category.id_category}>
+                    {category.category_name} ({category.section})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Sección de imágenes */}
+            <div className="border-t pt-4">
+              <h4 className="font-medium mb-4">Gestión de Imágenes</h4>
+              
+              {/* Upload */}
+              <div className="mb-4">
+                <input
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  onChange={(e) => setUploadFiles(e.target.files)}
+                  className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700"
+                />
+                <button
+                  onClick={handleUploadImages}
+                  disabled={loading || !uploadFiles}
+                  className="mt-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
+                >
+                  Subir Imágenes
+                </button>
+              </div>
+
+              {/* Imágenes existentes */}
+              <div className="grid grid-cols-4 gap-2">
+                {productImages.map((image) => (
+                  <div key={image.id_image} className="relative group">
+                    <img
+                      src={`http://localhost:4000${image.image_url}`}
+                      alt={`Imagen ${image.sort_order}`}
+                      className="w-full h-20 object-cover rounded"
+                    />
+                    <button
+                      onClick={() => handleDeleteImage(image.id_image)}
+                      className="absolute top-1 right-1 bg-red-600 text-white text-xs p-1 rounded opacity-0 group-hover:opacity-100"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Botones */}
+            <div className="flex gap-2 mt-6">
+              <button 
+                onClick={handleEditProduct} 
+                disabled={loading}
+                className="flex-1 bg-green-600 text-white p-2 rounded-lg hover:bg-green-700 disabled:bg-gray-400"
+              >
+                {loading ? 'Guardando...' : 'Guardar Cambios'}
+              </button>
+              <button 
+                onClick={() => {
+                  setShowEditForm(false)
+                  setSelectedProduct(null)
+                }} 
+                className="flex-1 bg-gray-300 text-gray-700 p-2 rounded-lg hover:bg-gray-400"
+              >
+                Cancelar
               </button>
             </div>
-          ))}
+          </div>
         </div>
-      </div>
-
-      {/* Botones */}
-      <div className="flex gap-2 mt-6">
-        <button onClick={handleEditProduct} className="flex-1 bg-green-600 text-white p-2 rounded-lg">
-          Guardar Cambios
-        </button>
-        <button onClick={() => setShowEditForm(false)} className="flex-1 bg-gray-300 text-gray-700 p-2 rounded-lg">
-          Cancelar
-        </button>
-      </div>
+      )}
     </div>
-  </div>
   )
 }
