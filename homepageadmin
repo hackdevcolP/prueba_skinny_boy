@@ -1,0 +1,571 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+import { Plus, Edit, Trash2, Upload, Eye, Save, X } from 'lucide-react'
+
+interface Product {
+  id_product: number
+  product_name: string
+  description: string
+  price: number
+  category_name: string
+  section: string
+  reference: string
+  images: string[]
+}
+
+interface Category {
+  id_category: number
+  category_name: string
+  section: string
+}
+
+interface ProductImage {
+  id_image: number
+  image_url: string
+  sort_order: number
+}
+
+interface NewProduct {
+  product_name: string
+  description: string
+  price: number
+  id_category: number
+  reference: string
+}
+
+export default function ProductsManagement() {
+  const [products, setProducts] = useState<Product[]>([])
+  const [categories, setCategories] = useState<Category[]>([])
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
+  const [productImages, setProductImages] = useState<ProductImage[]>([])
+  const [showCreateForm, setShowCreateForm] = useState(false)
+  const [showEditForm, setShowEditForm] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [message, setMessage] = useState('')
+  const [uploadFiles, setUploadFiles] = useState<FileList | null>(null)
+  
+  const [newProduct, setNewProduct] = useState<NewProduct>({
+    product_name: '',
+    description: '',
+    price: 0,
+    id_category: 0,
+    reference: ''
+  })
+
+  const [editProduct, setEditProduct] = useState<NewProduct>({
+    product_name: '',
+    description: '',
+    price: 0,
+    id_category: 0,
+    reference: ''
+  })
+
+  useEffect(() => {
+    fetchProducts()
+    fetchCategories()
+  }, [])
+
+  const fetchProducts = async () => {
+    try {
+      const response = await fetch('/api/products')
+      const data = await response.json()
+      setProducts(data.products || [])
+    } catch (error) {
+      console.error('Error fetching products:', error)
+    }
+  }
+
+  const fetchCategories = async () => {
+    try {
+      const response = await fetch('/api/categories')
+      const data = await response.json()
+      setCategories(data || [])
+    } catch (error) {
+      console.error('Error fetching categories:', error)
+    }
+  }
+
+  const fetchProductImages = async (productId: number) => {
+    try {
+      const response = await fetch(`/api/upload/product-images/${productId}`)
+      const data = await response.json()
+      setProductImages(data.images || [])
+    } catch (error) {
+      console.error('Error fetching product images:', error)
+    }
+  }
+
+  const handleCreateProduct = async () => {
+    if (!newProduct.product_name || !newProduct.description || newProduct.price <= 0) {
+      setMessage('Por favor completa todos los campos obligatorios')
+      return
+    }
+
+    setLoading(true)
+    try {
+      const response = await fetch('/api/products', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(newProduct),
+      })
+
+      const result = await response.json()
+
+      if (response.ok) {
+        setMessage('Producto creado exitosamente')
+        setShowCreateForm(false)
+        setNewProduct({
+          product_name: '',
+          description: '',
+          price: 0,
+          id_category: 0,
+          reference: ''
+        })
+        fetchProducts()
+      } else {
+        setMessage(`Error: ${result.message}`)
+      }
+    } catch (error) {
+      setMessage('Error al crear producto')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleEditProduct = async () => {
+    if (!selectedProduct || !editProduct.product_name) return
+
+    setLoading(true)
+    try {
+      const response = await fetch(`/api/products/${selectedProduct.id_product}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(editProduct),
+      })
+
+      const result = await response.json()
+
+      if (response.ok) {
+        setMessage('Producto actualizado exitosamente')
+        setShowEditForm(false)
+        setSelectedProduct(null)
+        fetchProducts()
+      } else {
+        setMessage(`Error: ${result.message}`)
+      }
+    } catch (error) {
+      setMessage('Error al actualizar producto')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleDeleteProduct = async (productId: number) => {
+    if (!confirm('¿Estás seguro de eliminar este producto? Esta acción no se puede deshacer.')) return
+
+    try {
+      const response = await fetch(`/api/products/${productId}`, {
+        method: 'DELETE',
+      })
+
+      if (response.ok) {
+        setMessage('Producto eliminado exitosamente')
+        fetchProducts()
+      } else {
+        setMessage('Error al eliminar producto')
+      }
+    } catch (error) {
+      setMessage('Error al eliminar producto')
+    }
+  }
+
+  const handleUploadImages = async () => {
+    if (!selectedProduct || !uploadFiles || uploadFiles.length === 0) {
+      setMessage('Selecciona un producto y archivos para subir')
+      return
+    }
+
+    setLoading(true)
+    try {
+      const formData = new FormData()
+      formData.append('product_id', selectedProduct.id_product.toString())
+
+      Array.from(uploadFiles).forEach((file) => {
+        formData.append('images', file)
+      })
+
+      const response = await fetch('/api/upload/multiple-images', {
+        method: 'POST',
+        body: formData,
+      })
+
+      const result = await response.json()
+
+      if (response.ok) {
+        setMessage(`${result.images.length} imágenes subidas exitosamente`)
+        fetchProductImages(selectedProduct.id_product)
+        setUploadFiles(null)
+        const fileInput = document.getElementById('file-input') as HTMLInputElement
+        if (fileInput) fileInput.value = ''
+      } else {
+        setMessage(`Error: ${result.message}`)
+      }
+    } catch (error) {
+      setMessage('Error al subir imágenes')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleDeleteImage = async (imageId: number) => {
+    if (!confirm('¿Eliminar esta imagen?')) return
+
+    try {
+      const response = await fetch(`/api/upload/image/${imageId}`, {
+        method: 'DELETE',
+      })
+
+      if (response.ok) {
+        setMessage('Imagen eliminada')
+        if (selectedProduct) {
+          fetchProductImages(selectedProduct.id_product)
+        }
+      } else {
+        setMessage('Error al eliminar imagen')
+      }
+    } catch (error) {
+      setMessage('Error al eliminar imagen')
+    }
+  }
+
+  const openEditForm = (product: Product) => {
+    setSelectedProduct(product)
+    setEditProduct({
+      product_name: product.product_name,
+      description: product.description,
+      price: product.price,
+      id_category: categories.find(c => c.category_name === product.category_name)?.id_category || 0,
+      reference: product.reference
+    })
+    setShowEditForm(true)
+  }
+
+  const viewProductImages = (product: Product) => {
+    setSelectedProduct(product)
+    fetchProductImages(product.id_product)
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="bg-white shadow-sm border-b">
+        <div className="max-w-7xl mx-auto px-4 py-6">
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Gestión de Productos</h1>
+              <p className="text-gray-600">Administra el catálogo de Skinny Boy</p>
+            </div>
+            <button
+              onClick={() => setShowCreateForm(true)}
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 flex items-center gap-2"
+            >
+              <Plus size={16} />
+              Nuevo Producto
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 py-6">
+        {/* Message */}
+        {message && (
+          <div className={`mb-6 p-4 rounded-lg ${
+            message.includes('Error') || message.includes('❌') 
+              ? 'bg-red-100 text-red-800' 
+              : 'bg-green-100 text-green-800'
+          }`}>
+            {message}
+            <button 
+              onClick={() => setMessage('')}
+              className="ml-2 text-sm underline"
+            >
+              Cerrar
+            </button>
+          </div>
+        )}
+
+        {/* Products Table */}
+        <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
+          <div className="px-6 py-4 border-b">
+            <h2 className="text-lg font-semibold">Productos ({products.length})</h2>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Producto</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Categoría</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Precio</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Referencia</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Imágenes</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Acciones</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {products.map((product) => (
+                  <tr key={product.id_product} className="hover:bg-gray-50">
+                    <td className="px-6 py-4">
+                      <div>
+                        <div className="font-medium text-gray-900">{product.product_name}</div>
+                        <div className="text-sm text-gray-500 truncate max-w-xs">{product.description}</div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="inline-flex px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
+                        {product.category_name}
+                      </span>
+                      <div className="text-xs text-gray-500 mt-1">{product.section}</div>
+                    </td>
+                    <td className="px-6 py-4 font-medium">
+                      ${new Intl.NumberFormat('es-CO').format(product.price)}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-500">
+                      {product.reference}
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-gray-600">{product.images.length}</span>
+                        <button
+                          onClick={() => viewProductImages(product)}
+                          className="text-blue-600 hover:text-blue-800"
+                        >
+                          <Eye size={16} />
+                        </button>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => openEditForm(product)}
+                          className="text-blue-600 hover:text-blue-800"
+                        >
+                          <Edit size={16} />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteProduct(product.id_product)}
+                          className="text-red-600 hover:text-red-800"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Product Images Section */}
+        {selectedProduct && !showCreateForm && !showEditForm && (
+          <div className="mt-6 bg-white rounded-lg shadow-sm border p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold">
+                Imágenes de {selectedProduct.product_name}
+              </h3>
+              <button
+                onClick={() => setSelectedProduct(null)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Upload Section */}
+            <div className="mb-6 p-4 border-2 border-dashed border-gray-300 rounded-lg">
+              <div className="text-center">
+                <Upload className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                <div className="space-y-2">
+                  <input
+                    id="file-input"
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    onChange={(e) => setUploadFiles(e.target.files)}
+                    className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                  />
+                  <button
+                    onClick={handleUploadImages}
+                    disabled={loading || !uploadFiles}
+                    className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 disabled:bg-gray-400"
+                  >
+                    {loading ? 'Subiendo...' : 'Subir Imágenes'}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Images Grid */}
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+              {productImages.map((image) => (
+                <div key={image.id_image} className="relative group">
+                  <img
+                    src={`http://localhost:4000${image.image_url}`}
+                    alt={`Imagen ${image.sort_order}`}
+                    className="w-full h-32 object-cover rounded-lg"
+                  />
+                  <button
+                    onClick={() => handleDeleteImage(image.id_image)}
+                    className="absolute top-2 right-2 bg-red-600 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <Trash2 size={12} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Create Product Modal */}
+      {showCreateForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h3 className="text-lg font-semibold mb-4">Crear Nuevo Producto</h3>
+            <div className="space-y-4">
+              <input
+                type="text"
+                placeholder="Nombre del producto"
+                value={newProduct.product_name}
+                onChange={(e) => setNewProduct({...newProduct, product_name: e.target.value})}
+                className="w-full p-2 border rounded-lg"
+              />
+              <textarea
+                placeholder="Descripción"
+                value={newProduct.description}
+                onChange={(e) => setNewProduct({...newProduct, description: e.target.value})}
+                className="w-full p-2 border rounded-lg h-24"
+              />
+              <input
+                type="number"
+                placeholder="Precio"
+                value={newProduct.price}
+                onChange={(e) => setNewProduct({...newProduct, price: Number(e.target.value)})}
+                className="w-full p-2 border rounded-lg"
+              />
+              <input
+                type="text"
+                placeholder="Referencia"
+                value={newProduct.reference}
+                onChange={(e) => setNewProduct({...newProduct, reference: e.target.value})}
+                className="w-full p-2 border rounded-lg"
+              />
+              <select
+                value={newProduct.id_category}
+                onChange={(e) => setNewProduct({...newProduct, id_category: Number(e.target.value)})}
+                className="w-full p-2 border rounded-lg"
+              >
+                <option value={0}>Seleccionar categoría</option>
+                {categories.map((category) => (
+                  <option key={category.id_category} value={category.id_category}>
+                    {category.category_name} ({category.section})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex gap-2 mt-6">
+              <button
+                onClick={handleCreateProduct}
+                disabled={loading}
+                className="flex-1 bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700"
+              >
+                {loading ? 'Creando...' : 'Crear Producto'}
+              </button>
+              <button
+                onClick={() => setShowCreateForm(false)}
+                className="flex-1 bg-gray-300 text-gray-700 p-2 rounded-lg hover:bg-gray-400"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Product Modal */}
+{showEditForm && selectedProduct && (
+  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+    <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+      <h3 className="text-lg font-semibold mb-4">Editar Producto</h3>
+      
+      {/* Formulario de edición */}
+      <div className="space-y-4 mb-6">
+        <input
+          type="text"
+          value={editProduct.product_name}
+          onChange={(e) => setEditProduct({...editProduct, product_name: e.target.value})}
+          className="w-full p-2 border rounded-lg"
+        />
+        {/* ... resto de campos ... */}
+      </div>
+
+      {/* Sección de imágenes */}
+      <div className="border-t pt-4">
+        <h4 className="font-medium mb-4">Gestión de Imágenes</h4>
+        
+        {/* Upload */}
+        <div className="mb-4">
+          <input
+            type="file"
+            multiple
+            accept="image/*"
+            onChange={(e) => setUploadFiles(e.target.files)}
+            className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700"
+          />
+          <button
+            onClick={handleUploadImages}
+            disabled={loading || !uploadFiles}
+            className="mt-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
+          >
+            Subir Imágenes
+          </button>
+        </div>
+
+        {/* Imágenes existentes */}
+        <div className="grid grid-cols-4 gap-2">
+          {productImages.map((image) => (
+            <div key={image.id_image} className="relative group">
+              <img
+                src={`http://localhost:4000${image.image_url}`}
+                className="w-full h-20 object-cover rounded"
+              />
+              <button
+                onClick={() => handleDeleteImage(image.id_image)}
+                className="absolute top-1 right-1 bg-red-600 text-white text-xs p-1 rounded opacity-0 group-hover:opacity-100"
+              >
+                ✕
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Botones */}
+      <div className="flex gap-2 mt-6">
+        <button onClick={handleEditProduct} className="flex-1 bg-green-600 text-white p-2 rounded-lg">
+          Guardar Cambios
+        </button>
+        <button onClick={() => setShowEditForm(false)} className="flex-1 bg-gray-300 text-gray-700 p-2 rounded-lg">
+          Cancelar
+        </button>
+      </div>
+    </div>
+  </div>
+  )
+}
